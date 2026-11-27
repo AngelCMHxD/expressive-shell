@@ -232,11 +232,4 @@ Singleton {
             }
         }
     }
-
-    Timer {
-        interval: Math.max(10, root.rotateIntervalSec) * 1000
-        running: root.autoRotate && root.wallpapers.length > 1
-        repeat: true
-        onTriggered: root.randomNext()
-    }
 }
