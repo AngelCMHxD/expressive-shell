@@ -238,6 +238,7 @@ Singleton {
         if (!s) return;
         if (isTemplateEnabled(s)) {
             enabledTemplates = enabledTemplates.filter(t => String(t) !== s);
+            Quickshell.execDetached(["python3", Quickshell.shellPath("scripts/apply-theme.py"), "--undo", s]);
         } else {
             enabledTemplates = [...enabledTemplates, s];
         }

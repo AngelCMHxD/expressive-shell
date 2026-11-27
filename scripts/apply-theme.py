@@ -114,6 +114,13 @@ def build_palette(colors: dict, mode: str) -> dict:
     out.setdefault("terminal_selection_background", out["primary_container"])
     out.setdefault("terminal_selection_foreground", out["on_primary_container"])
     out.setdefault("surface_tint", out["primary"])
+    out.setdefault("hover", out["tertiary"])
+    out.setdefault("on_hover", out["on_tertiary"])
+    out.setdefault("terminal_cursor_text", out["on_primary"])
+    out.setdefault("terminal_selection_bg", out["primary_container"])
+    out.setdefault("terminal_selection_fg", out["on_primary_container"])
+    out.setdefault("terminal_selection_background", out["primary_container"])
+    out.setdefault("terminal_selection_foreground", out["on_primary_container"])
     out["live_pill"] = "#4cd964" if mode == "dark" else "#5be078"
     out["on_live_pill"] = "#002108"
 
@@ -192,6 +199,8 @@ def format_color_prop(hex_color: str, prop: str) -> str:
         return stripped
     if prop == "rgb":
         return f"rgb({r}, {g}, {b})"
+    if prop == "rgb_csv":
+        return f"{r}, {g}, {b}"
     if prop == "rgba":
         return f"rgba({r}, {g}, {b}, 1.0)"
     if prop == "red":
@@ -200,6 +209,13 @@ def format_color_prop(hex_color: str, prop: str) -> str:
         return str(g)
     if prop == "blue":
         return str(b)
+    if prop in ("hue", "saturation", "lightness"):
+        h_val, l_val, s_val = colorsys.rgb_to_hls(r / 255.0, g / 255.0, b / 255.0)
+        if prop == "hue":
+            return str(round(h_val * 360))
+        if prop == "saturation":
+            return str(round(s_val * 100))
+        return str(round(l_val * 100))
     return h
 
 
@@ -482,7 +498,38 @@ def load_matugen_scheme() -> str:
     return "scheme-tonal-spot"
 
 
+def run_template_undo(target_id: str) -> None:
+    for manifest in discover_template_manifests():
+        try:
+            doc = tomllib.loads(manifest.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        templates = doc.get("templates")
+        if not isinstance(templates, dict):
+            continue
+        base_dir = manifest.parent
+        catalog = doc.get("catalog") if isinstance(doc.get("catalog"), dict) else {}
+        single_cat_id = next(iter(catalog.keys())) if len(catalog) == 1 else None
+
+        for name, cfg in templates.items():
+            if not isinstance(cfg, dict):
+                continue
+            cat_id = cfg.get("catalog_id") or (single_cat_id if single_cat_id else name)
+            if target_id != name and target_id != cat_id:
+                continue
+            undo_hook = cfg.get("undo_hook")
+            if undo_hook:
+                try:
+                    cmd = str(undo_hook).replace("{{ config_dir }}", str(base_dir)).replace("{{config_dir}}", str(base_dir))
+                    subprocess.run(cmd, shell=True, cwd=str(base_dir), capture_output=True, check=False)
+                except Exception as e:
+                    print(f"template {name}: undo_hook error ({e})", file=sys.stderr)
+
+
 def main() -> int:
+    if len(sys.argv) >= 3 and sys.argv[1] == "--undo":
+        run_template_undo(sys.argv[2])
+        return 0
     if len(sys.argv) < 2:
         print("Usage: apply-theme.py <image_path> [dark|light]", file=sys.stderr)
         return 1
