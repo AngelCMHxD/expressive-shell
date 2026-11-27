@@ -296,13 +296,19 @@ def process_noctalia_templates(palettes: dict, mode: str, image: str) -> None:
                 out_path = expand_template_path(str(out_entry), base_dir)
                 if multi_bundle and not out_path.parent.exists() and not out_path.parent.parent.exists():
                     continue
-                atomic_write(out_path, rendered)
-                wrote_any = True
+                try:
+                    atomic_write(out_path, rendered)
+                    wrote_any = True
+                except OSError as e:
+                    print(f"template {name}: skipped {out_path} ({e})", file=sys.stderr)
 
             post_hook = cfg.get("post_hook")
             if post_hook and wrote_any:
-                cmd = str(post_hook).replace("{{ config_dir }}", str(base_dir)).replace("{{config_dir}}", str(base_dir))
-                subprocess.run(cmd, shell=True, cwd=str(base_dir), capture_output=True, check=False)
+                try:
+                    cmd = str(post_hook).replace("{{ config_dir }}", str(base_dir)).replace("{{config_dir}}", str(base_dir))
+                    subprocess.run(cmd, shell=True, cwd=str(base_dir), capture_output=True, check=False)
+                except Exception as e:
+                    print(f"template {name}: post_hook error ({e})", file=sys.stderr)
 
 
 def build_umbriel_toml(p: dict) -> str:
