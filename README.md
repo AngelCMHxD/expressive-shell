@@ -113,3 +113,32 @@ settings.json       # Preferences
 colors.json         # Current Matugen palette
 templates/          # User templates, any Noctalia template should work
 ```
+
+## Screenshots
+
+### Control Panel
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/562dc7f4-e80a-4b79-9be1-2ce9b0390806" />
+
+### Music Player
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/da859b0b-3c89-4d96-9b43-5da4d24e9a51" />
+
+### Settings
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/687fb4e2-1332-4c3f-896d-0c870abad9f4" />
+
+### Calendar
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/354f3a25-91ae-4c3b-a6b1-5087a7f890cc" />
+
+### Launcher
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/40d81787-5c83-45ea-8878-4ed94ef66400" />
+
+### Wallpaper Picker
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/53cef8ea-777c-46be-8912-1fce214afbf5" />
+
+### Notifications
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/118aca09-7452-4fcc-9de1-a81995f955e0" />
+
+### Screenshot tool
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/3530b404-a0c8-4599-b6c8-bacc764b2d08" />
+
+
+
