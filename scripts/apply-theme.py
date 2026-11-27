@@ -341,7 +341,13 @@ def process_noctalia_templates(palettes: dict, mode: str, image: str) -> None:
             if name not in enabled_set and cat_id not in enabled_set:
                 continue
 
+            req_raw = cfg.get("requires_path")
+            if req_raw and not expand_template_path(str(req_raw), base_dir).exists():
+                continue
+
             in_raw = cfg.get("input_path")
+            if not in_raw and isinstance(cfg.get("input_path_modes"), dict):
+                in_raw = cfg["input_path_modes"].get(mode) or cfg["input_path_modes"].get("dark")
             if not in_raw and cfg.get("input_path_dynamic"):
                 in_raw = run_dynamic_cmd(str(cfg["input_path_dynamic"]), base_dir)
             if not in_raw:
