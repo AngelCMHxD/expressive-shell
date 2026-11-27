@@ -183,9 +183,15 @@ def render_noctalia_template(text: str, palettes: dict, mode: str, image: str, c
 
 
 def expand_template_path(raw: str, base_dir: Path) -> Path:
-    env_xdg = os.environ.get("XDG_CONFIG_HOME") or str(CONFIG)
+    xdg_map = {
+        "XDG_CONFIG_HOME": os.environ.get("XDG_CONFIG_HOME") or str(CONFIG),
+        "XDG_DATA_HOME": os.environ.get("XDG_DATA_HOME") or str(HOME / ".local" / "share"),
+        "XDG_CACHE_HOME": os.environ.get("XDG_CACHE_HOME") or str(HOME / ".cache"),
+        "XDG_STATE_HOME": os.environ.get("XDG_STATE_HOME") or str(HOME / ".local" / "state"),
+    }
     s = raw.replace("{{ config_dir }}", str(base_dir)).replace("{{config_dir}}", str(base_dir))
-    s = s.replace("$XDG_CONFIG_HOME", env_xdg).replace("${XDG_CONFIG_HOME}", env_xdg)
+    for k, v in xdg_map.items():
+        s = s.replace(f"${k}", v).replace(f"${{{k}}}", v)
     s = os.path.expandvars(os.path.expanduser(s))
     p = Path(s)
     if not p.is_absolute():
