@@ -1062,6 +1062,7 @@ PanelWindow {
                     color: scanM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
                     readonly property bool isScanning: (qsWin.activePage === "wifi" && SystemStatus.wifiScanning)
                         || (qsWin.activePage === "bluetooth" && SystemStatus.btScanning)
+                        || (qsWin.activePage === "templates" && ShellState.syncingTemplates)
 
                     Text {
                         anchors.centerIn: parent
@@ -1110,6 +1111,7 @@ PanelWindow {
                             if (qsWin.activePage === "wifi") SystemStatus.refreshWifiNetworks(true);
                             else if (qsWin.activePage === "bluetooth") SystemStatus.scanBluetooth();
                             else if (qsWin.activePage === "audio") SystemStatus.refreshAudioDetails();
+                            else if (qsWin.activePage === "templates") ShellState.syncTemplates();
                             else if (qsWin.activePage === "templates") ShellState.refreshTemplates();
                         }
                     }

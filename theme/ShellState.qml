@@ -55,6 +55,8 @@ Singleton {
     // Enabled Noctalia-compatible app template names (opt-in, all disabled by default)
     property var enabledTemplates: []
     property var availableTemplates: []
+    property bool syncingTemplates: false
+    property bool _autoSyncedTemplates: false
 
     // Hidden system tray app IDs (persisted in settings.json)
     property var hiddenTrayIds: []
@@ -291,10 +293,31 @@ Singleton {
                 if (!line || !line.trim()) return;
                 try {
                     const arr = JSON.parse(line);
-                    if (Array.isArray(arr)) root.availableTemplates = arr;
+                    if (Array.isArray(arr)) {
+                        root.availableTemplates = arr;
+                        if (arr.length === 0 && !root._autoSyncedTemplates) {
+                            root._autoSyncedTemplates = true;
+                            root.syncTemplates();
+                        }
+                    }
                 } catch (e) {}
             }
         }
+    }
+
+    Process {
+        id: syncTemplatesProc
+        command: ["python3", Quickshell.shellPath("scripts/sync-templates.py")]
+        onExited: {
+            root.syncingTemplates = false;
+            root.refreshTemplates();
+        }
+    }
+
+    function syncTemplates() {
+        if (syncTemplatesProc.running) return;
+        syncingTemplates = true;
+        syncTemplatesProc.running = true;
     }
 
     function refreshTemplates() {
