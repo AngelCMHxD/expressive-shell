@@ -299,6 +299,28 @@ def process_noctalia_templates(palettes: dict, mode: str, image: str) -> None:
                 try:
                     atomic_write(out_path, rendered)
                     wrote_any = True
+                except PermissionError:
+                    # If the file already exists and is writable by us (parent dir is root-owned), write directly
+                    try:
+                        out_path.write_text(rendered, encoding="utf-8")
+                        wrote_any = True
+                    except PermissionError:
+                        # One-time pkexec to create & chown the target file to current user so future runs need no prompt
+                        uid, gid = os.getuid(), os.getgid()
+                        res = subprocess.run(
+                            [
+                                "pkexec", "sh", "-c",
+                                'mkdir -p "$(dirname "$1")" && touch "$1" && chown "$2:$3" "$1"',
+                                "_", str(out_path), str(uid), str(gid),
+                            ],
+                            capture_output=True,
+                            check=False,
+                        )
+                        if res.returncode == 0:
+                            out_path.write_text(rendered, encoding="utf-8")
+                            wrote_any = True
+                        else:
+                            print(f"template {name}: skipped {out_path} (pkexec declined/failed)", file=sys.stderr)
                 except OSError as e:
                     print(f"template {name}: skipped {out_path} ({e})", file=sys.stderr)
 
