@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate Material 3 Expressive palettes from a wallpaper via matugen v4
 and render Noctalia-compatible app templates from ~/.config/quickshell/templates/."""
+import colorsys
 import json
 import os
 import re
@@ -115,6 +116,60 @@ def build_palette(colors: dict, mode: str) -> dict:
     out.setdefault("surface_tint", out["primary"])
     out["live_pill"] = "#4cd964" if mode == "dark" else "#5be078"
     out["on_live_pill"] = "#002108"
+
+    # Noctalia-compatible ANSI 16-color terminal palette harmonized toward the wallpaper's primary hue
+    def harmonize(base_hex: str, target_hex: str, mix: float = 0.22, lift: float = 0.0) -> str:
+        br, bg, bb = [c / 255.0 for c in hex_to_rgb(base_hex)]
+        tr, tg, tb = [c / 255.0 for c in hex_to_rgb(target_hex)]
+        r = br * (1.0 - mix) + tr * mix
+        g = bg * (1.0 - mix) + tg * mix
+        b = bb * (1.0 - mix) + tb * mix
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+        l = max(0.05, min(0.95, l + lift))
+        rr, gg, bb2 = colorsys.hls_to_rgb(h, l, s)
+        return f"#{int(round(rr * 255)):02x}{int(round(gg * 255)):02x}{int(round(bb2 * 255)):02x}"
+
+    prim = out["primary"]
+    if mode == "dark":
+        ansi = {
+            "terminal_normal_black": out["surface_container_lowest"],
+            "terminal_bright_black": out["outline"],
+            "terminal_normal_red": out["error"],
+            "terminal_bright_red": harmonize(out["error"], prim, 0.14, 0.08),
+            "terminal_normal_green": harmonize("#8bd589", prim, 0.22),
+            "terminal_bright_green": harmonize("#8bd589", prim, 0.22, 0.10),
+            "terminal_normal_yellow": out["tertiary"],
+            "terminal_bright_yellow": harmonize(out["tertiary"], prim, 0.15, 0.10),
+            "terminal_normal_blue": prim,
+            "terminal_bright_blue": harmonize(prim, "#ffffff", 0.20, 0.06),
+            "terminal_normal_magenta": out["secondary"],
+            "terminal_bright_magenta": harmonize(out["secondary"], prim, 0.18, 0.10),
+            "terminal_normal_cyan": harmonize("#7fd4c8", prim, 0.24),
+            "terminal_bright_cyan": harmonize("#7fd4c8", prim, 0.24, 0.10),
+            "terminal_normal_white": out["on_surface_variant"],
+            "terminal_bright_white": out["on_surface"],
+        }
+    else:
+        ansi = {
+            "terminal_normal_black": out["on_surface"],
+            "terminal_bright_black": out["outline"],
+            "terminal_normal_red": out["error"],
+            "terminal_bright_red": harmonize(out["error"], prim, 0.14, -0.06),
+            "terminal_normal_green": harmonize("#3d8f40", prim, 0.20),
+            "terminal_bright_green": harmonize("#3d8f40", prim, 0.20, -0.08),
+            "terminal_normal_yellow": out["tertiary"],
+            "terminal_bright_yellow": harmonize(out["tertiary"], prim, 0.15, -0.08),
+            "terminal_normal_blue": prim,
+            "terminal_bright_blue": harmonize(prim, "#000000", 0.14, -0.06),
+            "terminal_normal_magenta": out["secondary"],
+            "terminal_bright_magenta": harmonize(out["secondary"], prim, 0.18, -0.08),
+            "terminal_normal_cyan": harmonize("#1f7f85", prim, 0.22),
+            "terminal_bright_cyan": harmonize("#1f7f85", prim, 0.22, -0.08),
+            "terminal_normal_white": out["surface_container_high"],
+            "terminal_bright_white": out["surface"],
+        }
+    for k, v in ansi.items():
+        out.setdefault(k, v)
     return out
 
 
@@ -183,11 +238,12 @@ def render_noctalia_template(text: str, palettes: dict, mode: str, image: str, c
 
 
 def expand_template_path(raw: str, base_dir: Path) -> Path:
+    home = Path.home()
     xdg_map = {
         "XDG_CONFIG_HOME": os.environ.get("XDG_CONFIG_HOME") or str(CONFIG),
-        "XDG_DATA_HOME": os.environ.get("XDG_DATA_HOME") or str(HOME / ".local" / "share"),
-        "XDG_CACHE_HOME": os.environ.get("XDG_CACHE_HOME") or str(HOME / ".cache"),
-        "XDG_STATE_HOME": os.environ.get("XDG_STATE_HOME") or str(HOME / ".local" / "state"),
+        "XDG_DATA_HOME": os.environ.get("XDG_DATA_HOME") or str(home / ".local" / "share"),
+        "XDG_CACHE_HOME": os.environ.get("XDG_CACHE_HOME") or str(home / ".cache"),
+        "XDG_STATE_HOME": os.environ.get("XDG_STATE_HOME") or str(home / ".local" / "state"),
     }
     s = raw.replace("{{ config_dir }}", str(base_dir)).replace("{{config_dir}}", str(base_dir))
     for k, v in xdg_map.items():
@@ -334,7 +390,10 @@ def process_noctalia_templates(palettes: dict, mode: str, image: str) -> None:
             if post_hook and wrote_any:
                 try:
                     cmd = str(post_hook).replace("{{ config_dir }}", str(base_dir)).replace("{{config_dir}}", str(base_dir))
-                    subprocess.run(cmd, shell=True, cwd=str(base_dir), capture_output=True, check=False)
+                    if cfg.get("hook_async"):
+                        subprocess.Popen(cmd, shell=True, cwd=str(base_dir), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+                    else:
+                        subprocess.run(cmd, shell=True, cwd=str(base_dir), capture_output=True, check=False)
                 except Exception as e:
                     print(f"template {name}: post_hook error ({e})", file=sys.stderr)
 
