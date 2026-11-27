@@ -2987,62 +2987,34 @@ PanelWindow {
                     }
                 }
 
-                // Bottom actions: Apply now + Open templates folder
-                RowLayout {
+                // Bottom action: Open custom templates folder (toggles apply/undo immediately)
+                Rectangle {
                     Layout.fillWidth: true
-                    spacing: 8
+                    Layout.preferredHeight: 38
+                    radius: 19
+                    color: openDirM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
+                    scale: openDirM.pressed ? 0.97 : 1.0
+                    Behavior on scale { SpringAnimation { spring: Motion.spatialSpring; damping: Motion.spatialDamping } }
+                    Behavior on color { ColorAnimation { duration: Motion.fast } }
 
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 36
-                        radius: 18
-                        color: Theme.primary
-                        scale: applyTplM.pressed ? 0.96 : 1.0
-                        Behavior on scale { SpringAnimation { spring: Motion.spatialSpring; damping: Motion.spatialDamping } }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "󰏘  Apply now"
-                            color: Theme.fgPrimary
-                            font.family: Theme.fontSans
-                            font.pixelSize: 12
-                            font.weight: Font.DemiBold
-                        }
-
-                        MouseArea {
-                            id: applyTplM
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: ShellState.applyTemplatesNow()
-                        }
+                    Text {
+                        id: openDirTxt
+                        anchors.centerIn: parent
+                        text: "󰉋  Open custom templates folder"
+                        color: Theme.fgSurface
+                        font.family: Theme.fontSans
+                        font.pixelSize: 12
+                        font.weight: Font.Medium
                     }
 
-                    Rectangle {
-                        Layout.preferredHeight: 36
-                        Layout.preferredWidth: openDirTxt.implicitWidth + 24
-                        radius: 18
-                        color: openDirM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
-                        Behavior on color { ColorAnimation { duration: Motion.fast } }
-
-                        Text {
-                            id: openDirTxt
-                            anchors.centerIn: parent
-                            text: "󰉋  Folder"
-                            color: Theme.fgSurface
-                            font.family: Theme.fontSans
-                            font.pixelSize: 11
-                            font.weight: Font.Medium
-                        }
-
-                        MouseArea {
-                            id: openDirM
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                ShellState.closeOverlay();
-                                Quickshell.execDetached(["xdg-open", ShellState.configDir + "/templates"]);
-                            }
+                    MouseArea {
+                        id: openDirM
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            ShellState.closeOverlay();
+                            Quickshell.execDetached(["xdg-open", ShellState.configDir + "/templates"]);
                         }
                     }
                 }

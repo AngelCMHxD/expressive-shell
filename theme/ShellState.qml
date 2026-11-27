@@ -233,6 +233,12 @@ Singleton {
         }
     }
 
+    Timer {
+        id: applyTplTimer
+        interval: 180
+        onTriggered: root.applyTemplatesNow()
+    }
+
     function toggleTemplate(name) {
         const s = String(name || "").trim();
         if (!s) return;
@@ -241,6 +247,8 @@ Singleton {
             Quickshell.execDetached(["python3", Quickshell.shellPath("scripts/apply-theme.py"), "--undo", s]);
         } else {
             enabledTemplates = [...enabledTemplates, s];
+            writeStateNow();
+            applyTplTimer.restart();
         }
     }
 
