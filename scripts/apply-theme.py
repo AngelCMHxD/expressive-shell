@@ -21,7 +21,7 @@ QS_TEMPLATE_ROOTS = [
 ]
 UMBRIEL_COLORS = CONFIG / "umbriel" / "expressive-colors.toml"
 
-PLACEHOLDER_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}")
+PLACEHOLDER_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_.\-| ]+?)\s*\}\}")
 
 
 def atomic_write(path: Path, text: str) -> None:
@@ -219,10 +219,38 @@ def format_color_prop(hex_color: str, prop: str) -> str:
     return h
 
 
+def apply_color_filter(hex_color: str, filter_expr: str) -> str:
+    tokens = filter_expr.strip().split()
+    if not tokens:
+        return hex_color
+    op = tokens[0].lower()
+    arg = float(tokens[1]) if len(tokens) > 1 else 0.0
+    r, g, b = [c / 255.0 for c in hex_to_rgb(hex_color)]
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    # Handle both 0..100 percentages (e.g. `lighten 10` or `lighten 1`) and 0..1 fractions
+    delta = arg / 100.0 if abs(arg) >= 1.0 else arg
+    if op == "lighten":
+        l = min(1.0, l + delta)
+    elif op == "darken":
+        l = max(0.0, l - delta)
+    elif op == "saturate":
+        s = min(1.0, s + delta)
+    elif op == "desaturate":
+        s = max(0.0, s - delta)
+    else:
+        return hex_color
+    rr, gg, bb = colorsys.hls_to_rgb(h, l, s)
+    return f"#{int(round(rr * 255)):02x}{int(round(gg * 255)):02x}{int(round(bb * 255)):02x}"
+
+
 def render_noctalia_template(text: str, palettes: dict, mode: str, image: str, config_dir: Path) -> str:
-    """Render Noctalia / matugen `{{colors.<role>.<variant>.<format>}}` placeholders."""
+    """Render Noctalia / matugen `{{colors.<role>.<variant>.<format> | filter arg}}` placeholders."""
     def repl(match: re.Match) -> str:
-        expr = match.group(1)
+        raw_expr = match.group(1)
+        pipe_parts = [p.strip() for p in raw_expr.split("|")]
+        expr = pipe_parts[0]
+        filters = pipe_parts[1:]
+
         if expr == "image":
             return image
         if expr == "mode":
@@ -247,7 +275,23 @@ def render_noctalia_template(text: str, palettes: dict, mode: str, image: str, c
             pal = palettes.get(variant, palettes[mode])
             color = pal.get(role)
             if color:
-                return format_color_prop(color, fmt)
+                for f in filters:
+                    if f.lower() in ("upper", "lower", "strip_hash"):
+                        continue
+                    try:
+                        color = apply_color_filter(color, f)
+                    except Exception:
+                        pass
+                res = format_color_prop(color, fmt)
+                for f in filters:
+                    fl = f.lower()
+                    if fl == "upper":
+                        res = res.upper()
+                    elif fl == "lower":
+                        res = res.lower()
+                    elif fl == "strip_hash":
+                        res = res.lstrip("#")
+                return res
         return match.group(0)
 
     return PLACEHOLDER_RE.sub(repl, text)
